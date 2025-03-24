@@ -74,6 +74,38 @@
             color: white;
             text-align: center;
         }
+        /* Commentary Section Styles */
+#commentary-section {
+    background-color: #1f2937;
+    border: 1px solid #374151;
+    min-height: 150px;
+}
+
+#commentary-text {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #1f2937;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.4;
+}
+
+#commentary-text::-webkit-scrollbar {
+    width: 6px;
+}
+
+#commentary-text::-webkit-scrollbar-track {
+    background: #1f2937;
+    border-radius: 3px;
+}
+
+#commentary-text::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+    border-radius: 3px;
+}
+
+.commentary-container {
+    max-width: 100%;
+    margin: 0 auto;
+}
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white">
@@ -209,6 +241,12 @@
             </div>
         </div>
     </div>
+    <div class="commentary-container mt-4">
+        <div id="commentary-section" class="bg-gray-800 p-4 rounded-lg mb-4 max-h-12 w-100 overflow-y-auto">
+            <h3 class="text-lg font-bold mb-2 text-white">Ball-by-Ball Commentary</h3>
+            <div id="commentary-text" class="text-sm text-gray-200"></div>
+        </div>
+    </div>
     <!-- Run Buttons -->
     <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
         <h2 class="text-2xl font-bold text-center mb-4">Choose Run</h2>
@@ -273,6 +311,8 @@
 </div>
 
 <script src="script.js"></script>
-
+<!-- Add this in your HTML head section -->
+<script src="https://www.gstatic.com/dialogflow-console/fast/messenger-cx/bootstrap.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@google/generative-ai"></script>
 </body>
 </html>
