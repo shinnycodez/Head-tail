@@ -11,23 +11,48 @@ let currentBatsmanIndex = 0;
 let isUserBatting = false;
 let target = 0;
 let isInningsOver = false;
-let ballsBowled = 0;
 let isFirstInnings = true;
 
-// Over tracking variables
-let userBattingOvers = 0;
-let botBattingOvers = 0;
+// Over tracking - now tracking total balls instead of overs
+let userBallsBowled = 0;
+let botBallsBowled = 0;
 let ballsInCurrentOver = 0;
 
 // Anti-spam variables
 let lastUserChoices = [];
-const MAX_CHOICE_HISTORY = 2;
+const MAX_CHOICE_HISTORY = 3; // Track 3 choices for spam detection
 
 // Track individual player stats
 let userBatsmenStats = [];
 let botBatsmenStats = [];
-let userBowlersStats = [];
-let botBowlersStats = [];
+
+// Gemini API variables
+const geminiApiKey = "AIzaSyCScHjfpzU-tMyCj64aK26pg6UT1LN8mh8";
+let geminiModel;
+let commentaryHistory = [];
+
+// Initialize Gemini model
+async function initGemini() {
+    try {
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
+        geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+        console.log("Gemini model initialized");
+    } catch (error) {
+        console.error("Error initializing Gemini:", error);
+        // Fallback to simple commentary if Gemini fails
+        geminiModel = null;
+    }
+}
+
+// Call initialization when script loads
+initGemini();
+
+// Convert balls to overs format (e.g. 38 balls = 6.2 overs)
+function formatOvers(balls) {
+    const overs = Math.floor(balls / 6);
+    const ballsRemaining = balls % 6;
+    return `${overs}.${ballsRemaining}`;
+}
 
 // Start the game by entering team names
 function startGame() {
@@ -51,6 +76,7 @@ function proceedToToss() {
     userPlayers = [];
     botPlayers = [];
     lastUserChoices = [];
+    commentaryHistory = [];
     
     // Get player inputs
     const userInputs = document.querySelectorAll("#squad-selection .w-full.md\\:w-1\\/2:first-child .squad-input");
@@ -81,8 +107,6 @@ function proceedToToss() {
     // Initialize player stats
     userBatsmenStats = userPlayers.map(() => ({ runs: 0, balls: 0, isOut: false }));
     botBatsmenStats = botPlayers.map(() => ({ runs: 0, balls: 0, isOut: false }));
-    userBowlersStats = userPlayers.map(() => ({ wickets: 0, runs: 0, balls: 0 }));
-    botBowlersStats = botPlayers.map(() => ({ wickets: 0, runs: 0, balls: 0 }));
     
     // Proceed to next screen
     document.getElementById("squad-selection").classList.add("hidden");
@@ -141,14 +165,13 @@ function startInnings() {
         userWickets = 0;
         botWickets = 0;
         currentBatsmanIndex = 0;
-        ballsBowled = 0;
+        userBallsBowled = 0;
+        botBallsBowled = 0;
         ballsInCurrentOver = 0;
-        userBattingOvers = 0;
-        botBattingOvers = 0;
         lastUserChoices = [];
+        commentaryHistory = [];
     } else {
         // For second innings, just reset the balls counter
-        ballsBowled = 0;
         ballsInCurrentOver = 0;
         lastUserChoices = [];
     }
@@ -169,22 +192,122 @@ function startInnings() {
         document.getElementById("bot-team-scorecard-title").innerText = `${botTeam} Bowling`;
         if (isFirstInnings) {
             document.getElementById("result-text").innerText = `${userTeam} is batting first`;
+            addCommentary(`${userTeam} are coming out to bat first. Let's play!`);
         } else {
             document.getElementById("result-text").innerText = `${userTeam} needs ${target} to win`;
+            addCommentary(`${userTeam} needs ${target} runs to win. Exciting chase coming up!`);
         }
     } else {
         document.getElementById("user-team-scorecard-title").innerText = `${userTeam} Bowling`;
         document.getElementById("bot-team-scorecard-title").innerText = `${botTeam} Batting`;
         if (isFirstInnings) {
             document.getElementById("result-text").innerText = `${botTeam} is batting first`;
+            addCommentary(`${botTeam} will bat first. The bowlers need to step up!`);
         } else {
             document.getElementById("result-text").innerText = `${botTeam} needs ${target} to win`;
+            addCommentary(`${botTeam} needs ${target} runs to win. Can they do it?`);
         }
     }
     document.getElementById("result-text").classList.remove("hidden");
 
     isInningsOver = false;
     updateScorecard();
+}
+
+// Generate commentary for game events
+async function generateCommentary(event, runs, isWicket = false) {
+    if (!geminiModel) {
+        // Simple fallback commentary if Gemini isn't available
+        const simpleCommentary = isWicket 
+            ? `OUT! ${getCurrentBatsman()} is dismissed!`
+            : runs === 0 
+                ? `Dot ball. Good delivery.`
+                : runs === 4 
+                    ? `FOUR! ${getCurrentBatsman()} finds the boundary.`
+                    : runs === 6 
+                        ? `SIX! ${getCurrentBatsman()} with a massive hit!`
+                        : `${runs} run${runs > 1 ? 's' : ''} taken.`;
+        
+        addCommentary(simpleCommentary);
+        return;
+    }
+
+    try {
+        // Build the prompt
+        const battingTeam = isUserBatting ? userTeam : botTeam;
+        const bowlingTeam = isUserBatting ? botTeam : userTeam;
+        const batsman = getCurrentBatsman();
+        const score = isUserBatting ? userScore : botScore;
+        const wickets = isUserBatting ? userWickets : botWickets;
+        const overs = formatOvers(isUserBatting ? userBallsBowled : botBallsBowled);
+        
+        let prompt = `Generate a single, concise cricket commentary line (max 15 words) for this event:\n`;
+        prompt += `Match: ${battingTeam} vs ${bowlingTeam}\n`;
+        prompt += `Current batsman: ${batsman}\n`;
+        prompt += `Score: ${score}/${wickets} in ${overs} overs\n`;
+        
+        if (isWicket) {
+            prompt += `Event: Wicket falls!\n`;
+            prompt += `Commentary should express the dismissal with appropriate emotion.`;
+        } else {
+            prompt += `Event: ${runs} run${runs > 1 ? 's' : ''} scored\n`;
+            if (runs === 4) {
+                prompt += `Commentary should describe a boundary with excitement.`;
+            } else if (runs === 6) {
+                prompt += `Commentary should describe a six with great enthusiasm.`;
+            } else if (runs === 0) {
+                prompt += `Commentary should describe a dot ball, possibly praising the bowler.`;
+            } else {
+                prompt += `Commentary should describe the runs taken.`;
+            }
+        }
+        
+        prompt += `\nKeep it short (1 sentence max), colorful, and cricket-appropriate.`;
+        prompt += `\nExample for a six: "What a shot! ${batsman} launches it into the stands for a maximum!"`;
+        prompt += `\nExample for a wicket: "Gone! ${batsman} edges it to the keeper, that's a big wicket!"`;
+        
+        // Add context from previous commentary
+        if (commentaryHistory.length > 0) {
+            prompt += `\n\nPrevious commentary context:\n${commentaryHistory.slice(-3).join('\n')}`;
+        }
+
+        // Generate the commentary
+        const result = await geminiModel.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text().trim();
+        
+        // Add to commentary history
+        addCommentary(text);
+        commentaryHistory.push(text);
+        
+        // Keep history manageable
+        if (commentaryHistory.length > 10) {
+            commentaryHistory.shift();
+        }
+    } catch (error) {
+        console.error("Error generating commentary:", error);
+        // Fallback to simple commentary
+        generateCommentary(event, runs, isWicket); // This will use the fallback
+    }
+}
+
+function getCurrentBatsman() {
+    return isUserBatting 
+        ? userPlayers[currentBatsmanIndex] 
+        : botPlayers[currentBatsmanIndex];
+}
+
+function addCommentary(text) {
+    const commentaryElement = document.getElementById("commentary-text");
+    const entry = document.createElement("div");
+    entry.className = "mb-1 border-b border-gray-700 pb-1";
+    entry.textContent = `• ${text}`;
+    commentaryElement.prepend(entry);
+    
+    // Limit to last 10 commentary entries
+    if (commentaryElement.children.length > 10) {
+        commentaryElement.removeChild(commentaryElement.lastChild);
+    }
 }
 
 // Update the scorecard with detailed stats
@@ -293,33 +416,29 @@ function updateScorecard() {
     document.getElementById("user-total-score").textContent = userScore;
     document.getElementById("bot-total-score").textContent = botScore;
     
-    // Update overs - show both teams' overs
-    const userOversDisplay = isUserBatting ? 
-        `${userBattingOvers}.${ballsInCurrentOver}` : 
-        `${userBattingOvers}.0`;
-    const botOversDisplay = !isUserBatting ? 
-        `${botBattingOvers}.${ballsInCurrentOver}` : 
-        `${botBattingOvers}.0`;
-    
-    document.getElementById("user-overs").textContent = userOversDisplay;
-    document.getElementById("bot-overs").textContent = botOversDisplay;
+    // Update overs - now using accurate ball count
+    if (isUserBatting) {
+        document.getElementById("user-overs").textContent = formatOvers(userBallsBowled);
+        document.getElementById("bot-overs").textContent = formatOvers(botBallsBowled);
+    } else {
+        document.getElementById("bot-overs").textContent = formatOvers(botBallsBowled);
+        document.getElementById("user-overs").textContent = formatOvers(userBallsBowled);
+    }
 }
 
 // Handle run selection with anti-spam measures
 function chooseRun(userRunChoice) {
     if (isInningsOver) return;
 
-    // Track last user choices (we now track 3 choices to detect third repeat)
+    // Track last user choices
     lastUserChoices.push(userRunChoice);
-    if (lastUserChoices.length > 3) {
+    if (lastUserChoices.length > MAX_CHOICE_HISTORY) {
         lastUserChoices.shift();
     }
 
     // Determine bot choice based on spam detection
     let botRunChoice;
-    
-    // Check if user has made the same choice 3 times in a row
-    const isSpamming = lastUserChoices.length === 3 && 
+    const isSpamming = lastUserChoices.length === MAX_CHOICE_HISTORY && 
                       lastUserChoices[0] === lastUserChoices[1] && 
                       lastUserChoices[1] === lastUserChoices[2];
     
@@ -339,30 +458,23 @@ function chooseRun(userRunChoice) {
     }
 
     // Update game state
-    ballsBowled++;
-    ballsInCurrentOver++;
-    
-    // Update overs when 6 balls are bowled
-    if (ballsInCurrentOver >= 6) {
-        if (isUserBatting) {
-            userBattingOvers++;
-        } else {
-            botBattingOvers++;
-        }
-        ballsInCurrentOver = 0;
+    if (isUserBatting) {
+        userBallsBowled++;
+    } else {
+        botBallsBowled++;
     }
     
     // Handle batting logic
     if (isUserBatting) {
         if (userRunChoice === botRunChoice) {
             // Wicket falls when choices match
+            generateCommentary("wicket", 0, true);
             userWickets++;
             userBatsmenStats[currentBatsmanIndex].isOut = true;
             userBatsmenStats[currentBatsmanIndex].balls++;
             currentBatsmanIndex++;
             document.getElementById("user-wickets").innerText = userWickets;
             
-            // Reset choice history after wicket
             lastUserChoices = [];
             
             if (userWickets === 10 || currentBatsmanIndex >= userPlayers.length) {
@@ -371,6 +483,7 @@ function chooseRun(userRunChoice) {
             }
         } else {
             // No wicket, add runs
+            generateCommentary("run", userRunChoice);
             userScore += userRunChoice;
             userBatsmenStats[currentBatsmanIndex].runs += userRunChoice;
             userBatsmenStats[currentBatsmanIndex].balls++;
@@ -386,13 +499,13 @@ function chooseRun(userRunChoice) {
     else {
         if (userRunChoice === botRunChoice) {
             // Wicket falls when choices match
+            generateCommentary("wicket", 0, true);
             botWickets++;
             botBatsmenStats[currentBatsmanIndex].isOut = true;
             botBatsmenStats[currentBatsmanIndex].balls++;
             currentBatsmanIndex++;
             document.getElementById("bot-wickets").innerText = botWickets;
             
-            // Reset choice history after wicket
             lastUserChoices = [];
             
             if (botWickets === 10 || currentBatsmanIndex >= botPlayers.length) {
@@ -401,6 +514,7 @@ function chooseRun(userRunChoice) {
             }
         } else {
             // No wicket, add runs
+            generateCommentary("run", botRunChoice);
             botScore += botRunChoice;
             botBatsmenStats[currentBatsmanIndex].runs += botRunChoice;
             botBatsmenStats[currentBatsmanIndex].balls++;
@@ -415,6 +529,7 @@ function chooseRun(userRunChoice) {
     
     updateScorecard();
 }
+
 // End innings
 function endInnings() {
     isInningsOver = true;
@@ -427,18 +542,18 @@ function endInnings() {
         if (isUserBatting) {
             target = userScore + 1;
             resultText.innerText = `${userTeam} scored ${userScore}. ${botTeam} needs ${target} to win.`;
+            addCommentary(`That's the end of ${userTeam}'s innings! They've set a target of ${target} runs.`);
             isUserBatting = false;
         } else {
             target = botScore + 1;
             resultText.innerText = `${botTeam} scored ${botScore}. ${userTeam} needs ${target} to win.`;
+            addCommentary(`That's the end of ${botTeam}'s innings! ${userTeam} needs ${target} runs to win.`);
             isUserBatting = true;
         }
         resultText.className = "bg-blue-600 p-4 rounded-lg shadow-lg mb-6 text-center text-xl font-bold";
         
         // Reset for second innings
         currentBatsmanIndex = 0;
-        ballsBowled = 0;
-        ballsInCurrentOver = 0;
         setTimeout(startInnings, 2000);
     } else {
         // Second innings ended - game over
@@ -446,17 +561,21 @@ function endInnings() {
             if (userScore >= target) {
                 resultText.innerText = `${userTeam} wins by ${10 - userWickets} wickets!`;
                 resultText.className = "bg-green-600 p-4 rounded-lg shadow-lg mb-6 text-center text-xl font-bold";
+                addCommentary(`What a victory! ${userTeam} wins by ${10 - userWickets} wickets!`);
             } else {
                 resultText.innerText = `${botTeam} wins by ${target - userScore - 1} runs!`;
                 resultText.className = "bg-red-600 p-4 rounded-lg shadow-lg mb-6 text-center text-xl font-bold";
+                addCommentary(`Heartbreak for ${userTeam}! ${botTeam} wins by ${target - userScore - 1} runs!`);
             }
         } else {
             if (botScore >= target) {
                 resultText.innerText = `${botTeam} wins by ${10 - botWickets} wickets!`;
                 resultText.className = "bg-red-600 p-4 rounded-lg shadow-lg mb-6 text-center text-xl font-bold";
+                addCommentary(`Dominant performance! ${botTeam} wins by ${10 - botWickets} wickets!`);
             } else {
                 resultText.innerText = `${userTeam} wins by ${target - botScore - 1} runs!`;
                 resultText.className = "bg-green-600 p-4 rounded-lg shadow-lg mb-6 text-center text-xl font-bold";
+                addCommentary(`Incredible! ${userTeam} wins by ${target - botScore - 1} runs!`);
             }
         }
     }
