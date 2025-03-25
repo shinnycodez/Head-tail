@@ -26,6 +26,10 @@ const MAX_CHOICE_HISTORY = 3; // Track 3 choices for spam detection
 let userBatsmenStats = [];
 let botBatsmenStats = [];
 
+// Ball timer variables
+let isBallInProgress = false;
+let ballTimer = null;
+
 // Gemini API variables
 const geminiApiKey = "AIzaSyCScHjfpzU-tMyCj64aK26pg6UT1LN8mh8";
 let geminiModel;
@@ -47,6 +51,16 @@ async function initGemini() {
 // Call initialization when script loads
 initGemini();
 
+        // Show rules modal when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('rules-modal').classList.remove('hidden');
+        });
+
+        // Close rules and show team entry
+        function closeRules() {
+            document.getElementById('rules-modal').classList.add('hidden');
+            document.getElementById('team-entry').classList.remove('hidden');
+        }
 // Convert balls to overs format (e.g. 38 balls = 6.2 overs)
 function formatOvers(balls) {
     const overs = Math.floor(balls / 6);
@@ -426,10 +440,86 @@ function updateScorecard() {
     }
 }
 
-// Handle run selection with anti-spam measures
+// Handle run selection with timer
 function chooseRun(userRunChoice) {
-    if (isInningsOver) return;
+    // Prevent multiple clicks while ball is in progress
+    if (isInningsOver || isBallInProgress) return;
+    
+    // Set ball in progress and disable buttons
+    isBallInProgress = true;
+    const runButtons = document.querySelectorAll('.run-button');
+    
+    // Apply disabled styling to all buttons
+    runButtons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add(
+            'opacity-60',          // Reduce opacity
+            'cursor-not-allowed',  // Change cursor
+            'grayscale-30',        // Partial grayscale
+            'brightness-90',       // Slightly reduce brightness
+            'transform',           // Prepare for scale transform
+            'scale-95'             // Slightly shrink buttons
+        );
+        // Remove hover effects
+        btn.classList.remove(
+            'hover:brightness-110',
+            'hover:scale-105',
+            'active:scale-100'
+        );
+    });
+    
+    // Show countdown timer
+    const timerDisplay = document.createElement('div');
+    timerDisplay.id = 'ball-timer';
+    timerDisplay.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-70 text-white text-6xl font-bold rounded-full w-20 h-20 flex items-center justify-center z-50 animate-pulse';
+    timerDisplay.textContent = '3';
+    document.body.appendChild(timerDisplay);
+    
+    let countdown = 3;
+    const timerInterval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+            timerDisplay.textContent = countdown;
+        } else {
+            clearInterval(timerInterval);
+            document.body.removeChild(timerDisplay);
+            
+            // Process the ball after timer completes
+            processBall(userRunChoice);
+            
+            // Re-enable buttons after a short delay (with animation)
+            setTimeout(() => {
+                runButtons.forEach(btn => {
+                    btn.disabled = false;
+                    btn.classList.remove(
+                        'opacity-60',
+                        'cursor-not-allowed',
+                        'grayscale-30',
+                        'brightness-90',
+                        'scale-95'
+                    );
+                    // Restore hover effects
+                    btn.classList.add(
+                        'hover:brightness-110',
+                        'hover:scale-105',
+                        'active:scale-100'
+                    );
+                    
+                    // Add a quick "pop" animation when re-enabling
+                    btn.classList.add('transform', 'scale-105');
+                    setTimeout(() => {
+                        btn.classList.remove('scale-105');
+                    }, 150);
+                });
+                
+                isBallInProgress = false;
+            }, 300); // Slight delay before re-enabling
+        }
+    }, 500); // Countdown interval (1 second)
+}
 
+// Process the ball after timer completes
+function processBall(userRunChoice) {
     // Track last user choices
     lastUserChoices.push(userRunChoice);
     if (lastUserChoices.length > MAX_CHOICE_HISTORY) {
