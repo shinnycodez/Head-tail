@@ -75,43 +75,156 @@
             text-align: center;
         }
         /* Commentary Section Styles */
-#commentary-section {
-    background-color: #1f2937;
-    border: 1px solid #374151;
-    min-height: 150px;
-}
+        #commentary-section {
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            min-height: 150px;
+        }
 
-#commentary-text {
-    scrollbar-width: thin;
-    scrollbar-color: #4b5563 #1f2937;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.4;
-}
+        #commentary-text {
+            scrollbar-width: thin;
+            scrollbar-color: #4b5563 #1f2937;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.4;
+        }
 
-#commentary-text::-webkit-scrollbar {
-    width: 6px;
-}
+        #commentary-text::-webkit-scrollbar {
+            width: 6px;
+        }
 
-#commentary-text::-webkit-scrollbar-track {
-    background: #1f2937;
-    border-radius: 3px;
-}
+        #commentary-text::-webkit-scrollbar-track {
+            background: #1f2937;
+            border-radius: 3px;
+        }
 
-#commentary-text::-webkit-scrollbar-thumb {
-    background-color: #4b5563;
-    border-radius: 3px;
-}
+        #commentary-text::-webkit-scrollbar-thumb {
+            background-color: #4b5563;
+            border-radius: 3px;
+        }
 
-.commentary-container {
-    max-width: 100%;
-    margin: 0 auto;
-}
+        .commentary-container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        #ball-timer {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+        /* Style for disabled buttons */
+        .run-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(50%);
+        }
+
+        /* Optional: Style for enabled buttons */
+        .run-button {
+            transition: all 0.3s ease; /* Smooth transition when enabling/disabling */
+        }
+        
+        /* Rules Modal Styles */
+        body.modal-open {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        .rules-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 0;
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .rules-content {
+            background-color: #1f2937;
+            border-radius: 0;
+            padding: 20px;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        @media (min-width: 768px) {
+            .rules-content {
+                border-radius: 12px;
+                max-width: 600px;
+                max-height: 80vh;
+                width: auto;
+                height: auto;
+                padding: 25px;
+            }
+        }
+
+        
+        .rules-content h2 {
+            color: #f59e0b;
+            font-size: 24px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .rules-content ul {
+            list-style-type: disc;
+            padding-left: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .rules-content li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .highlight {
+            color: #f59e0b;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white">
 
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="rules-modal">
+        <div class="rules-content">
+            <h2>🏏 Cricket Game Rules 🏏</h2>
+            <ul>
+                <li><span class="highlight">Two Innings Match:</span> Each team gets to bat and bowl once.</li>
+                <li><span class="highlight">Toss:</span> Winner chooses whether to bat or bowl first.</li>
+                <li><span class="highlight">Batting:</span> When your team is batting, select runs (0-6).</li>
+                <li><span class="highlight">Bowling:</span> When your team is bowling, try to match the opponent's run choice to get them out.</li>
+                <li><span class="highlight">Wickets:</span> If batting and bowling choices match, the batsman is out!</li>
+                <li><span class="highlight">Anti-Spam:</span> Repeatedly choosing the same run will get you out!</li>
+                <li><span class="highlight">Overs:</span> Unlimited overs - bat until all wickets fall.</li>
+                <li><span class="highlight">Target:</span> In the second innings, chase the target set in the first innings.</li>
+                <li><span class="highlight">Player Stats:</span> Track each player's runs, balls faced, and strike rate.</li>
+                <li><span class="highlight">Timer:</span> 3-second countdown before each ball to prevent rapid clicking.</li>
+            </ul>
+            <p class="text-center text-yellow-300 mb-4">Good luck and enjoy the game!</p>
+            <button onclick="closeRules()" class="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-lg font-bold">
+                I Understand - Start Game
+            </button>
+        </div>
+    </div>
+
     <!-- Team Entry Section -->
-    <div id="team-entry" class="flex flex-col items-center">
+    <div id="team-entry" class="hidden flex flex-col items-center">
         <h1 class="text-2xl font-bold mb-6">Head and Tail Game</h1>
         <div class="flex items-center mb-2">
             <img src="Colorful Abstract Illustrative Cricket Sports Logo.png" alt="User Team Logo" class="w-10 h-10 rounded-full mr-2">
@@ -124,57 +237,56 @@
         <button onclick="startGame()" class="px-6 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg ml-2 text-lg">Start Game</button>
     </div>
 
-<!-- Squad Selection Section -->
-<!-- Squad Selection Section -->
-<div id="squad-selection" class="hidden w-full px-4">
-    <div class="flex flex-col md:flex-row md:items-center">
-        <!-- User Team Squad -->
-        <div class="w-full md:w-1/2">
-            <div class="flex flex-col items-center mb-4">
-                <img src="Colorful Abstract Illustrative Cricket Sports Logo.png" alt="User Team Logo" class="w-16 h-16 rounded-full mb-2">
-                <div class="squad-title text-lg font-bold text-center" id="user-squad-title"></div>
+    <!-- Squad Selection Section -->
+    <div id="squad-selection" class="hidden w-full px-4">
+        <div class="flex flex-col md:flex-row md:items-center">
+            <!-- User Team Squad -->
+            <div class="w-full md:w-1/2">
+                <div class="flex flex-col items-center mb-4">
+                    <img src="Colorful Abstract Illustrative Cricket Sports Logo.png" alt="User Team Logo" class="w-16 h-16 rounded-full mb-2">
+                    <div class="squad-title text-lg font-bold text-center" id="user-squad-title"></div>
+                </div>
+                <div class="squad-grid grid grid-cols-1 gap-3">
+                    <input type="text" placeholder="Player 1" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 2" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 3" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 4" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 5" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 6" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 7" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 8" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 9" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 10" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                </div>
             </div>
-            <div class="squad-grid grid grid-cols-1 gap-3">
-                <input type="text" placeholder="Player 1" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 2" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 3" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 4" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 5" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 6" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 7" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 8" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 9" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 10" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+
+            <!-- VS Text (Visible on PC) -->
+            <div class="hidden md:block text-4xl font-bold text-purple-500 mx-6">VS</div>
+
+            <!-- Bot Team Squad -->
+            <div class="w-full md:w-1/2 mt-6 md:mt-0">
+                <div class="flex flex-col items-center mb-4">
+                    <img src="03Oct24 Anis Free Upload.png" alt="Bot Team Logo" class="w-16 h-16 rounded-full mb-2">
+                    <div class="squad-title text-lg font-bold text-center" id="bot-squad-title"></div>
+                </div>
+                <div class="squad-grid grid grid-cols-1 gap-3">
+                    <input type="text" placeholder="Player 1" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 2" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 3" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 4" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 5" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 6" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 7" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 8" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 9" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                    <input type="text" placeholder="Player 10" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
+                </div>
             </div>
         </div>
 
-        <!-- VS Text (Visible on PC) -->
-        <div class="hidden md:block text-4xl font-bold text-purple-500 mx-6">VS</div>
-
-        <!-- Bot Team Squad -->
-        <div class="w-full md:w-1/2 mt-6 md:mt-0">
-            <div class="flex flex-col items-center mb-4">
-                <img src="03Oct24 Anis Free Upload.png" alt="Bot Team Logo" class="w-16 h-16 rounded-full mb-2">
-                <div class="squad-title text-lg font-bold text-center" id="bot-squad-title"></div>
-            </div>
-            <div class="squad-grid grid grid-cols-1 gap-3">
-                <input type="text" placeholder="Player 1" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 2" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 3" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 4" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 5" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 6" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 7" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 8" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 9" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-                <input type="text" placeholder="Player 10" class="squad-input w-full md:w-3/4 p-2 bg-gray-800 rounded-lg text-white text-center mx-auto">
-            </div>
-        </div>
+        <!-- Proceed to Toss Button -->
+        <button onclick="proceedToToss()" class="mt-6 w-full md:w-auto px-6 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg text-lg mx-auto block">Proceed to Toss</button>
     </div>
-
-    <!-- Proceed to Toss Button -->
-    <button onclick="proceedToToss()" class="mt-6 w-full md:w-auto px-6 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg text-lg mx-auto block">Proceed to Toss</button>
-</div>
   <!-- Game Section -->
 <div id="game-section" class="hidden flex flex-col items-center">
     <div class="flex w-full justify-between items-center mb-4 flex-row">
@@ -251,22 +363,22 @@
     <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
         <h2 class="text-2xl font-bold text-center mb-4">Choose Run</h2>
         <div class="grid grid-cols-3 gap-4">
-            <button onclick="chooseRun(0)" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-lg">
+            <button onclick="chooseRun(0)" class="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-lg run-button">
                 Dot
             </button>
-            <button onclick="chooseRun(1)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg">
+            <button onclick="chooseRun(1)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg run-button">
                 1
             </button>
-            <button onclick="chooseRun(2)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg">
+            <button onclick="chooseRun(2)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg run-button">
                 2
             </button>
-            <button onclick="chooseRun(3)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg">
+            <button onclick="chooseRun(3)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg run-button">
                 3
             </button>
-            <button onclick="chooseRun(4)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg">
+            <button onclick="chooseRun(4)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg run-button">
                 4
             </button>
-            <button onclick="chooseRun(6)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg">
+            <button onclick="chooseRun(6)" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-lg run-button">
                 6
             </button>
         </div>
